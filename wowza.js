@@ -1,8 +1,9 @@
 'use strict'
 
-let http,
-	httpClient = require('./http-digest-client/http-digest-client'),
-	querystring = require('querystring');
+//let http,
+//	httpClient = require('./http-digest-client/http-digest-client'),
+let	querystring = require('querystring');
+const { spawn } = require('child_process');
 
 /**
  *This class is JavaScript wrapper for cURL REST API for Wowza Streaming Engine server <br>
@@ -40,14 +41,15 @@ class WowzaAPI {
 		this.mediaCasterType = options.mediaCasterType || 'rtp';
 		this.commonRequestUrl = `http://${this.wowzaAdress}:8087`;
 		this.authEnabled = false;
-		if ( options.username != '' && options.password != '' ){
+		this.autOptions = options.username + ':' + options.password;
+		/*if ( options.username != '' && options.password != '' ){
 				console.log("using digest library");
 				this.authEnabled = true;
 				http = httpClient(options.username, options.password);
 		} else {
 				console.log("using native library");
 				http = require("http");
-		}
+		}*/
 		this.httpOptions = {
 			host: this.wowzaAdress,
 			port: '8087',
@@ -784,7 +786,7 @@ class WowzaAPI {
 
 	makeNetworkRequest(options, resolve, reject){
 			var req, body;
-			try {
+			/*try {
 					if ( options.body && this.authEnabled == false ){
 						body = options.body;
 						delete options.body;
@@ -797,7 +799,60 @@ class WowzaAPI {
 					req.end();
 			} catch(e){
 				reject(e);
+			}*/
+			
+			
+			
+			let shellParams = [
+				'-X', 
+				options.method,
+				'--digest',
+				'-u',
+				this.autOptions,
+				'-H',
+				'Accept:application/json; charset=utf-8',
+				'-H',
+				'Content-Type:application/json; charset=utf-8'
+			];
+			
+			if(options.body) {
+				shellParams.push('-d')
+				shellParams.push(options.body),
+				shellParams.push('http://' + options.host + ':' + options.port + options.path)
 			}
+			
+			const ls = spawn('curl', [
+				'-X', 
+				options.method,
+				'--digest',
+				'-u',
+				this.autOptions,
+				'-H',
+				'Accept:application/json; charset=utf-8',
+				'-H',
+				'Content-Type:application/json; charset=utf-8',
+				'-d',
+				options.body,
+				'http://' + options.host + ':' + options.port + options.path
+			]);
+			
+			let curlRes = [];
+			
+			ls.stdout.on('data', (data) => {
+			  //console.log(`stdout: ${data}`);
+			  curlRes.push(`${data}`);
+			});
+			
+			ls.stderr.on('data', (data) => {
+			  //curlRes.push(`${data}`);
+			});
+			
+			ls.on('close', (code) => {
+			  //console.log(`child process exited with code ${code}`);
+			  resolve(curlRes.join(''))
+			});
+			
+		
 
 			return req;
 	}
