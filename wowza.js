@@ -61,6 +61,23 @@ class WowzaAPI {
 			}
 		}
 	}
+	
+	getApplicationInfos(options) {
+
+		let application = this.application;
+		if (options && options.application) application = options.application;
+
+		return new Promise((resolve, reject) => {
+
+			//getting a clone of the common httpOptions object and change it's path to necessary
+			let options = Object.assign({}, this.httpOptions);
+			options.method = 'GET';
+			options.path = `${this.httpOptions.path}/applications/${application}`;
+
+			//getting request object
+			this.makeNetworkRequest(options, resolve, reject);
+		});
+	}
 
 	/**
 	 *Get a list of streamfiles
